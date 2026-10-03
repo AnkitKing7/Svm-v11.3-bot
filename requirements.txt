@@ -1,0 +1,8 @@
+discord.py>=2.3
+python-dotenv>=1.0
+requests>=2.31
+paramiko>=3.4
+flask>=3.0
+flask-cors>=4.0
+cairosvg>=2.7        # optional: PNG dashboards (or install librsvg2-bin); falls back to SVG if missing
+pytest>=8.0          # optional: tests/
