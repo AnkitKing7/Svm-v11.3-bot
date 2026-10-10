@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Terminus · Live SSH</title>
+    <title>AnkitCoder • SVM+ Web SSH</title>
 
     <!-- xterm.js + addons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
@@ -324,7 +324,7 @@
             <div class="titlebar-left">
                 <div class="tab">
                     <i class="fas fa-terminal"></i>
-                    <span id="tabTitle">Terminus — SSH</span>
+                    <span id="tabTitle">AnkitCoder • SVM+ Web SSH</span>
                 </div>
             </div>
             <div class="titlebar-right">
@@ -366,7 +366,7 @@
             </div>
             <div class="sb-item">
                 <i class="fas fa-code"></i>
-                <span>Terminus · xterm.js</span>
+                <span>AnkitCoder • SVM+ · xterm.js</span>
             </div>
         </div>
     </div>
@@ -473,6 +473,19 @@
             const sbLatency       = document.getElementById('sbLatency');
             const sbLatencyText   = document.getElementById('sbLatencyText');
 
+            // Prefill connection details from SVM+ DM links (?host=PUBLIC_IP&port=FORWARDED_SSH_PORT).
+            // Credentials are never placed in the URL.
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const qHost = (params.get('host') || '').trim();
+                const qPort = Number.parseInt(params.get('port') || '', 10);
+                if (qHost) inHost.value = qHost;
+                if (Number.isInteger(qPort) && qPort >= 1 && qPort <= 65535) inPort.value = String(qPort);
+                if (qHost && qPort) {
+                    tabTitle.textContent = `SVM+ SSH · ${qHost}:${qPort}`;
+                }
+            } catch (_) {}
+
             // ── state ──
             let sessionId   = null;
             let isConnected = false;
@@ -480,9 +493,10 @@
 
             function writeWelcome() {
                 term.writeln('\x1b[1;38;5;141m╭──────────────────────────────────────────╮\x1b[0m');
-                term.writeln('\x1b[1;38;5;141m│\x1b[0m  \x1b[1;97mTerminus SSH\x1b[0m  \x1b[38;5;245m— Live Console (xterm.js)\x1b[0m  \x1b[1;38;5;141m│\x1b[0m');
+                term.writeln('\x1b[1;38;5;141m│\x1b[0m  \x1b[1;97mANKITCODER • SVM+\x1b[0m  \x1b[38;5;245m— Secure Web SSH Console\x1b[0m  \x1b[1;38;5;141m│\x1b[0m');
                 term.writeln('\x1b[1;38;5;141m╰──────────────────────────────────────────╯\x1b[0m');
                 term.writeln('');
+                term.writeln('\x1b[38;5;245m  SVM+ Browser Terminal • connect using your VPS SSH details.\x1b[0m');
                 term.writeln('\x1b[38;5;245m  Click \x1b[0m\x1b[1;38;5;141mConnect\x1b[0m\x1b[38;5;245m to start a secure session.\x1b[0m');
                 term.writeln('');
                 term.writeln('\x1b[38;5;240m  ──────────────────────────────────────────\x1b[0m');
@@ -505,7 +519,7 @@
                 } else {
                     statusIndicator.classList.remove('connected');
                     statusText.textContent = 'Disconnected';
-                    tabTitle.textContent = 'Terminus — SSH';
+                    tabTitle.textContent = 'AnkitCoder • SVM+ Web SSH';
                     disconnectBtn.disabled = true;
                     sbSession.classList.remove('active');
                     sbSessionText.textContent = 'No session';
@@ -577,12 +591,15 @@
                     if (!sessionId || busyRead) return;
                     busyRead = true;
                     try {
+                        const pollStarted = performance.now();
                         const res = await fetch('/api/ssh/read', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ session_id: sessionId, last_index: lastIdx })
                         });
                         const data = await res.json();
+                        const pollMs = Math.max(0, Math.round(performance.now() - pollStarted));
+                        sbLatencyText.textContent = `${pollMs}ms API`;
                         if (data.success) {
                             if (data.data) {
                                 term.write(data.data);
@@ -653,13 +670,7 @@
                 term.focus();
             });
 
-            // ── latency indicator ──
-            setInterval(() => {
-                if (isConnected) {
-                    const ping = Math.floor(Math.random() * 14 + 3);
-                    sbLatencyText.textContent = `${ping}ms`;
-                }
-            }, 2800);
+            // Latency is measured from real API polling responses (not randomly generated).
 
             // ── keyboard shortcuts ──
             document.addEventListener('keydown', (e) => {
